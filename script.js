@@ -8,78 +8,74 @@ const colorMap = {
     purple: '🟪',
     black: '⬛️',
     white: '⬜️',
-    brown: '🟫'
+    brown: '🟫',
+    lightBlue: '🟦' // Map lightBlue to blue emoji
 };
 
-// RGB to color name mapping with perceptually adjusted colors
+// Helper: Convert RGB to HSL
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
+            case g: h = ((b - r) / d + 2); break;
+            case b: h = ((r - g) / d + 4); break;
+        }
+        h /= 6;
+    }
+    return [h * 360, s, l];
+}
+
+// Improved color detection
 function getClosestColor(r, g, b) {
     const colors = {
-        red: [255, 0, 0],
+        red: [220, 20, 60],
         orange: [255, 140, 0],
-        yellow: [255, 255, 0],
-        green: [0, 200, 0],
-        blue: [0, 0, 255],
-        lightBlue: [135, 206, 235],
-        purple: [160, 32, 240],
+        yellow: [255, 215, 0],
+        green: [0, 200, 40],      // More saturated green
+        blue: [0, 120, 255],      // More saturated blue
+        lightBlue: [135, 206, 250], // Add light blue reference
+        purple: [128, 0, 128],
         black: [0, 0, 0],
         white: [255, 255, 255],
-        brown: [139, 69, 19]
+        brown: [160, 82, 45]
     };
+
+    // Calculate luminance and chroma
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const chroma = max - min;
+
+    // Only force black/white if the color is not colorful (chroma < 30)
+    if (chroma < 30) {
+        if (luminance < 30) return 'black';
+        if (luminance > 235) return 'white';
+    }
 
     let minDistance = Infinity;
     let closestColor = 'black';
-
-    // Special handling for blue detection
-    if (b > r && b > g) {
-        // Calculate color saturation to avoid detecting grayish colors as blue
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const saturation = max === 0 ? 0 : (max - min) / max;
-        
-        // Only consider it blue if it has sufficient saturation and blue dominance
-        if (saturation > 0.15 && (b - Math.max(r, g)) > 20) {
-            for (const [color, [r2, g2, b2]] of Object.entries(colors)) {
-                if (color === 'blue' || color === 'lightBlue') {
-                    // Weight blue channel more heavily for blue detection
-                    const distance = Math.sqrt(
-                        Math.pow(r - r2, 2) * 0.3 +
-                        Math.pow(g - g2, 2) * 0.3 +
-                        Math.pow(b - b2, 2) * 1.5
-                    );
-                    
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestColor = color;
-                    }
-                }
-            }
-            
-            // If we found a blue match, return it
-            if (closestColor === 'blue' || closestColor === 'lightBlue') {
-                return 'blue';  // Map both light and dark blue to blue emoji
-            }
-        }
-    }
-
-    // For non-blue colors, use LAB color space
     for (const [color, [r2, g2, b2]] of Object.entries(colors)) {
-        if (color === 'lightBlue') continue;  // Skip light blue in LAB comparison
-        
         const lab1 = rgbToLab(r, g, b);
         const lab2 = rgbToLab(r2, g2, b2);
-        
         const distance = Math.sqrt(
             Math.pow(lab1[0] - lab2[0], 2) +
             Math.pow(lab1[1] - lab2[1], 2) +
             Math.pow(lab1[2] - lab2[2], 2)
         );
-
         if (distance < minDistance) {
             minDistance = distance;
             closestColor = color;
         }
     }
-
+    // Treat lightBlue as blue for emoji output
+    if (closestColor === 'lightBlue') return 'blue';
     return closestColor;
 }
 
@@ -163,47 +159,93 @@ fileInput.addEventListener('change', (e) => {
 
 // Process the uploaded image
 function processImage(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            // For images 32x32 or smaller, use exact pixels
-            if (img.width <= 32 && img.height <= 32) {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-            } else {
-                // Calculate new dimensions while maintaining aspect ratio
-                let width = img.width;
-                let height = img.height;
-                const maxSize = 32;
+    if (file.type === 'image/svg+xml') {
+        // Read SVG as text
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // Create a data URL for the SVG
+            const svgText = e.target.result;
+            const svgBase64 = btoa(unescape(encodeURIComponent(svgText)));
+            const dataUrl = 'data:image/svg+xml;base64,' + svgBase64;
 
-                if (width > height) {
-                    height = Math.round((height * maxSize) / width);
-                    width = maxSize;
-                } else {
-                    width = Math.round((width * maxSize) / height);
-                    height = maxSize;
+            const img = new Image();
+            img.onload = () => {
+                // Set default size for SVG if not specified
+                let width = img.width || 32;
+                let height = img.height || 32;
+                // Optionally, scale to fit max 32x32
+                if (width > 32 || height > 32) {
+                    if (width > height) {
+                        height = Math.round((height * 32) / width);
+                        width = 32;
+                    } else {
+                        width = Math.round((width * 32) / height);
+                        height = 32;
+                    }
                 }
-
-                // Set canvas size and draw image
                 canvas.width = width;
                 canvas.height = height;
+                ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(img, 0, 0, width, height);
-            }
 
-            // Get image data and convert to emoji
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const emojiArt = convertToEmoji(imageData, canvas.width, canvas.height);
-            
-            // Display result
-            emojiOutput.textContent = emojiArt;
-            resultContainer.style.display = 'block';
-            infoBox.style.display = 'none'; 
+                // Get image data and convert to emoji
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const emojiArt = convertToEmoji(imageData, canvas.width, canvas.height);
+
+                // Display result
+                emojiOutput.textContent = emojiArt;
+                resultContainer.style.display = 'block';
+                infoBox.style.display = 'none';
+            };
+            img.src = dataUrl;
         };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+        reader.readAsText(file);
+    } else {
+        // Existing code for raster images
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // For images 32x32 or smaller, use exact pixels
+                if (img.width <= 32 && img.height <= 32) {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.imageSmoothingEnabled = true; // No resampling, keep original
+                    ctx.drawImage(img, 0, 0);
+                } else {
+                    // Calculate new dimensions while maintaining aspect ratio
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 32;
+
+                    if (width > height) {
+                        height = Math.round((height * maxSize) / width);
+                        width = maxSize;
+                    } else {
+                        width = Math.round((width * maxSize) / height);
+                        height = maxSize;
+                    }
+
+                    // Set canvas size and draw image with nearest neighbor resampling
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.imageSmoothingEnabled = false; // Nearest neighbor
+                    ctx.drawImage(img, 0, 0, width, height);
+                }
+
+                // Get image data and convert to emoji
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const emojiArt = convertToEmoji(imageData, canvas.width, canvas.height);
+                
+                // Display result
+                emojiOutput.textContent = emojiArt;
+                resultContainer.style.display = 'block';
+                infoBox.style.display = 'none'; 
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
 // Convert image data to emoji art
