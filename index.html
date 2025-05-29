@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixEmoji - Convert Images to Emoji Art</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PixEmoji</h1>
+        <p class="subtitle">Convert your images into emoji art</p>
+        
+        <div class="upload-container" id="dropZone">
+            <div class="upload-content">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E" alt="Upload" class="upload-icon">
+                <p>Drag and drop your image here</p>
+                <p>or</p>
+                <label for="fileInput" class="upload-button">Choose File</label>
+                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <p>For best results, use images up to 32x32 pixels. Larger images will be automatically resized.</p>
+        </div>
+
+        <div class="result-container" id="resultContainer" style="display: none;">
+            <h2>Your Emoji Art</h2>
+            <div class="emoji-output" id="emojiOutput"></div>
+            <div class="action-buttons">
+                <button id="copyButton" class="copy-button">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
