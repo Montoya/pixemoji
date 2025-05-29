@@ -46,6 +46,7 @@ function getClosestColor(r, g, b) {
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
+const infoBox = document.getElementById('infoBox'); 
 const resultContainer = document.getElementById('resultContainer');
 const emojiOutput = document.getElementById('emojiOutput');
 const copyButton = document.getElementById('copyButton');
@@ -119,6 +120,7 @@ function processImage(file) {
             // Display result
             emojiOutput.textContent = emojiArt;
             resultContainer.style.display = 'block';
+            infoBox.style.display = 'none'; 
         };
         img.src = e.target.result;
     };

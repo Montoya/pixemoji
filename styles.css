@@ -120,6 +120,10 @@ h1 {
     gap: 1rem;
     margin-top: 1rem;
 }
+
+#alternateIdea { 
+    padding-top: 1rem;
+}
 /*
 #tweetButton {
     background-color: #111;
