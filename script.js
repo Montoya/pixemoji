@@ -128,7 +128,7 @@ const copyButton = document.getElementById('copyButton');
 
 // Create hidden canvas for image processing
 const canvas = document.createElement('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
 // Handle drag and drop events
 dropZone.addEventListener('dragover', (e) => {
@@ -248,25 +248,59 @@ function processImage(file) {
     }
 }
 
-// Convert image data to emoji art
+function isLightColor(colorName) {
+    // Add any other color names you want to treat as light
+    return ['white', 'yellow', 'green', 'blue', 'orange', 'lightBlue'].includes(colorName);
+}
+
 function convertToEmoji(imageData, width, height) {
     let emojiArt = '';
     const data = imageData.data;
 
+    // Analyze only non-transparent pixels to see if the image is mostly light
+    let lightCount = 0;
+    let nonTransparentCount = 0;
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const i = (y * width + x) * 4;
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            
-            const color = getClosestColor(r, g, b);
-            emojiArt += colorMap[color];
+            const a = data[i + 3];
+            if (a >= 128) {
+                nonTransparentCount++;
+                const color = getClosestColor(r, g, b);
+                if (isLightColor(color)) lightCount++;
+            }
+        }
+    }
+    const mostlyLight = nonTransparentCount > 0 && (lightCount / nonTransparentCount) > 0.6;
+
+    // Convert to emoji, handling transparency
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const a = data[i + 3];
+
+            if (a < 128) {
+                // Transparent pixel
+                emojiArt += mostlyLight ? colorMap['black'] : colorMap['white'];
+            } else {
+                const color = getClosestColor(r, g, b);
+                emojiArt += colorMap[color];
+            }
         }
         emojiArt += '\n';
     }
-
     return emojiArt;
+}
+
+// Helper to check if a pixel is white
+function isWhite(r, g, b) {
+    return r > 220 && g > 220 && b > 220;
 }
 
 // Copy to clipboard functionality
