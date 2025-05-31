@@ -137,3 +137,30 @@ h1 {
 #fbButton:hover {
     background-color: #365899;
 } */
+
+@media (max-width: 540px) {
+    #emojiOutput {
+        zoom:0.75;
+    }
+}
+
+@media (max-width: 460px) {
+    #emojiOutput {
+        zoom:0.5;
+    }
+}
+
+@media (max-width: 380px) {
+    #emojiOutput {
+        zoom:0.375;
+    }
+    #emojiText {
+        display: none;
+    }
+}
+
+@media (max-width: 320px) {
+    #emojiOutput {
+        zoom:0.25;
+    }
+}
